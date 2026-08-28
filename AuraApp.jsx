@@ -1,19 +1,12 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { StoreProvider, useStore } from './store'
 import { Nav } from './ui'
 import GiveAura from './GiveAura'
-import { Home, Leaderboard, Notifications, Onboarding, ProfileView, Settings, ShareSheet } from './screens'
-import { Login } from './Login'
+import { Home, Leaderboard, Notifications, ProfileView, Settings, ShareSheet } from './screens'
 import { FriendsDiscover } from './Friends'
 
-function LoginGate() {
-  const [create, setCreate] = useState(false)
-  if (create) return <Onboarding />
-  return <Login onCreate={() => setCreate(true)} />
-}
-
 function Shell() {
-  const { me, state } = useStore()
+  const { me, state, loginDemo } = useStore()
   const [tab, setTab] = useState('home')
   const [giveOpen, setGiveOpen] = useState(false)
   const [givePrefill, setGivePrefill] = useState(null)
@@ -21,7 +14,11 @@ function Shell() {
   const [overlay, setOverlay] = useState(null)
   const [shareUser, setShareUser] = useState(null)
 
-  if (!state.onboarded || !me()) return <LoginGate />
+  useEffect(() => {
+    if (!state.onboarded || !me()) loginDemo()
+  }, [state.onboarded, state.currentUserId])
+
+  if (!me()) return null
 
   const unread = state.notifs.filter((n) => n.userId === me().id && !n.read).length
 

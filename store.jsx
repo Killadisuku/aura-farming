@@ -13,7 +13,7 @@ function hydrate() {
   try { const raw = localStorage.getItem(KEY); if (raw) return JSON.parse(raw) } catch {}
   return {
     users: SEED_USERS, follows: SEED_FOLLOWS, txs: SEED_TX, notifs: SEED_NOTIFS,
-    currentUserId: null, onboarded: false, googleSession: null,
+    currentUserId: 'u_ahmed', onboarded: true, googleSession: null,
     friendRequests: [
       { id: 'fr_1', fromId: 'u_sarah', toId: 'u_ahmed', status: 'pending', ts: Date.now() - 3600000 },
       { id: 'fr_2', fromId: 'u_mike', toId: 'u_ahmed', status: 'pending', ts: Date.now() - 7200000 },
@@ -81,20 +81,22 @@ export function StoreProvider({ children }) {
       const nu = { id, name: name.trim() || 'New Aura', username: username.toLowerCase().replace(/[^a-z0-9_]/g, '') || 'user', bio: 'Just entered the Aura.', avatar: avatar || `https://api.dicebear.com/9.x/adventurer/svg?seed=${encodeURIComponent(username)}&backgroundColor=1e1b4b`, interests: interests || [], auraReceived: 0, auraGiven: 0, breakdown: emptyBreakdown(), streak: 1, lastActiveDay: todayKey(), privacy: { hideActivity: false, privateProfile: false, locationOn: false }, location: '', createdAt: Date.now() }
       setState((s) => ({ ...s, users: [nu, ...s.users], follows: { ...s.follows, [id]: ['u_sarah', 'u_alex', 'u_emma'] }, currentUserId: id, onboarded: true }))
     }
-    function logout() { setState((s) => ({ ...s, currentUserId: null, onboarded: false, googleSession: null })) }
-    function resetDemo() { localStorage.removeItem(KEY); setState({ users: SEED_USERS, follows: SEED_FOLLOWS, txs: SEED_TX, notifs: SEED_NOTIFS, currentUserId: null, onboarded: false, googleSession: null, friendRequests: [], blocked: {}, reports: [], daily: { date: todayKey(), challenge: challengeForToday(), completedBy: [] }, hiddenTx: {} }) }
+    function logout() { setState((s) => ({ ...s, currentUserId: 'u_ahmed', onboarded: true, googleSession: null })) }
+    function resetDemo() { localStorage.removeItem(KEY); setState({ users: SEED_USERS, follows: SEED_FOLLOWS, txs: SEED_TX, notifs: SEED_NOTIFS, currentUserId: 'u_ahmed', onboarded: true, googleSession: null, friendRequests: [], blocked: {}, reports: [], daily: { date: todayKey(), challenge: challengeForToday(), completedBy: [] }, hiddenTx: {} }) }
     function follow(id) { const mid = state.currentUserId; if (!mid || id === mid) return; setState((s) => { const list = s.follows[mid] || []; const next = list.includes(id) ? list.filter((x) => x !== id) : [...list, id]; return { ...s, follows: { ...s.follows, [mid]: next } } }) }
     function givenTodayTo(fromId, toId) { const start = new Date(); start.setHours(0,0,0,0); return state.txs.filter((t) => t.fromId === fromId && t.toId === toId && t.ts >= start.getTime()) }
     function givenTodayTotal(fromId) { const start = new Date(); start.setHours(0,0,0,0); return state.txs.filter((t) => t.fromId === fromId && t.ts >= start.getTime()) }
     function canGive(fromId, toId, amount) {
-      if (fromId === toId) return { ok: false, reason: 'You cannot give Aura to yourself.' }
+      if (fromId === toId) return { ok: false, reason: 'You cannot score yourself.' }
+      if (!amount) return { ok: false, reason: 'Pick a score.' }
+      if (amount > 100 || amount < -100) return { ok: false, reason: 'Score must be between −100 and +100.' }
       if (isBlocked(fromId, toId)) return { ok: false, reason: 'You cannot interact with this person.' }
       const same = givenTodayTo(fromId, toId)
-      if (same.length >= 3) return { ok: false, reason: 'Daily limit reached for this person (3 gifts).' }
-      if (same.reduce((a,t)=>a+t.amount,0) + amount > 100) return { ok: false, reason: 'Max +100 Aura to the same person per day.' }
+      if (same.length >= 3) return { ok: false, reason: 'Daily limit reached for this person (3 scores).' }
+      if (same.filter((t)=>t.amount>0).reduce((a,t)=>a+t.amount,0) + Math.max(0, amount) > 100) return { ok: false, reason: 'Max +100 Aura to the same person per day.' }
+      if (same.filter((t)=>t.amount<0).reduce((a,t)=>a+t.amount,0) + Math.min(0, amount) < -100) return { ok: false, reason: 'Max −100 dishonor to the same person per day.' }
       const all = givenTodayTotal(fromId)
-      if (all.length >= 20) return { ok: false, reason: 'Daily give limit reached. Come back tomorrow.' }
-      if (all.reduce((a,t)=>a+t.amount,0) + amount > 250) return { ok: false, reason: 'Daily Aura budget is 250.' }
+      if (all.length >= 20) return { ok: false, reason: 'Daily score limit reached. Come back tomorrow.' }
       if (state.txs.filter((t) => t.fromId === fromId && Date.now() - t.ts < 20000).length >= 4) return { ok: false, reason: 'Slow down.' }
       return { ok: true }
     }
@@ -109,13 +111,15 @@ export function StoreProvider({ children }) {
     function giveAura({ toId, amount, category, message }) {
       const fromId = state.currentUserId; const check = canGive(fromId, toId, amount); if (!check.ok) return check
       const from = user(fromId); const to = user(toId); const cat = categoryById(category)
-      const prevLevel = getLevel(to.auraReceived).current.name; const nextReceived = to.auraReceived + amount; const nextLevel = getLevel(nextReceived).current.name
+      const prevLevel = getLevel(to.auraReceived).current.name
+      const nextReceived = Math.max(0, to.auraReceived + amount)
+      const nextLevel = getLevel(nextReceived).current.name
       const tx = { id: 't_' + Date.now(), fromId, toId, amount, category, message: (message||'').trim(), ts: Date.now(), likes: [] }
-      const notifs = [{ id: 'n_' + Date.now(), userId: toId, type: 'received', text: `You received +${amount} Aura!`, sub: `${from.name} gave you ${cat.label} Aura.`, fromId, amount, read: false, ts: Date.now() }]
-      if (nextLevel !== prevLevel) notifs.push({ id: 'n_lv_' + Date.now(), userId: toId, type: 'level', text: `You reached Aura Level: ${nextLevel}.`, sub: 'Your energy just leveled up.', read: false, ts: Date.now() + 1 })
+      const notifs = [{ id: 'n_' + Date.now(), userId: toId, type: amount < 0 ? 'dishonor' : 'received', text: amount < 0 ? `You lost ${-amount} Aura.` : `You received +${amount} Aura!`, sub: amount < 0 ? `${from.name} marked you for ${cat.label}.` : `${from.name} gave you ${cat.label} Aura.`, fromId, amount, read: false, ts: Date.now() }]
+      if (nextLevel !== prevLevel) notifs.push({ id: 'n_lv_' + Date.now(), userId: toId, type: 'level', text: `Aura level is now ${nextLevel}.`, sub: amount < 0 ? 'A mark was recorded.' : 'Your energy just leveled up.', read: false, ts: Date.now() + 1 })
       setState((s) => ({ ...s, txs: [tx, ...s.txs], notifs: [...notifs, ...s.notifs], users: s.users.map((u) => {
-        if (u.id === fromId) return { ...u, auraGiven: u.auraGiven + amount, lastActiveDay: todayKey() }
-        if (u.id === toId) return { ...u, auraReceived: u.auraReceived + amount, breakdown: { ...u.breakdown, [category]: (u.breakdown[category] || 0) + amount } }
+        if (u.id === fromId) return { ...u, auraGiven: u.auraGiven + Math.max(0, amount), lastActiveDay: todayKey() }
+        if (u.id === toId) return { ...u, auraReceived: Math.max(0, u.auraReceived + amount), breakdown: { ...u.breakdown, [category]: Math.max(0, (u.breakdown[category] || 0) + amount) } }
         return u
       }) }))
       touchStreak(); return { ok: true, tx }

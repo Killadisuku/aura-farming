@@ -1,0 +1,13 @@
+{
+  "name": "AURA",
+  "short_name": "AURA",
+  "description": "Give good energy. Get recognized.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#121314",
+  "theme_color": "#121314",
+  "orientation": "portrait",
+  "icons": [
+    { "src": "/aura.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" }
+  ]
+}

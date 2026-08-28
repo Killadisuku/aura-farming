@@ -6,14 +6,14 @@ export function Logo({ size = 64 }) {
     <svg viewBox="0 0 64 64" width={size} height={size}>
       <defs>
         <radialGradient id="ag" cx="50%" cy="50%" r="50%">
-          <stop offset="0%" stopColor="#e879f9" />
-          <stop offset="50%" stopColor="#818cf8" />
-          <stop offset="100%" stopColor="#22d3ee" />
+          <stop offset="0%" stopColor="#7d8b99" />
+          <stop offset="55%" stopColor="#c4c0b4" />
+          <stop offset="100%" stopColor="#b08a4a" />
         </radialGradient>
       </defs>
       <circle cx="32" cy="32" r="29" fill="none" stroke="url(#ag)" strokeWidth="2.4" />
       <circle cx="32" cy="32" r="23" fill="none" stroke="url(#ag)" strokeWidth="1.2" opacity="0.35" />
-      <text x="32" y="42" textAnchor="middle" fontFamily="Syne, Outfit, sans-serif" fontWeight="800" fontSize="28" fill="url(#ag)">A</text>
+      <text x="32" y="42" textAnchor="middle" fontFamily="Cinzel, Syne, serif" fontWeight="700" fontSize="28" fill="url(#ag)">A</text>
     </svg>
   )
 }
@@ -79,8 +79,9 @@ export function FeedCard({ tx, onOpen }) {
   if (!from || !to) return null
   if (to.privacy?.hideActivity || from.privacy?.hideActivity) return null
   if (state.hiddenTx[tx.id]) return null
+  const neg = tx.amount < 0
   return (
-    <article className="glass feed-card" style={{ '--cat': cat.color }} onClick={() => onOpen?.(to.id)}>
+    <article className="glass feed-card" style={{ '--cat': neg ? '#8b3a3a' : cat.color }} onClick={() => onOpen?.(to.id)}>
       <div className="feed-top">
         <div className="av-stack">
           <img className="av" src={from.avatar} alt="" />
@@ -88,11 +89,11 @@ export function FeedCard({ tx, onOpen }) {
         </div>
         <div className="who">
           <strong>{from.name} → {to.name}</strong>
-          <span>@{from.username} gave @{to.username}</span>
+          <span>@{from.username} {neg ? 'marked' : 'gave'} @{to.username}</span>
         </div>
-        <div className="amt">+{tx.amount}</div>
+        <div className={neg ? 'amt neg' : 'amt'}>{neg ? tx.amount : '+' + tx.amount}</div>
       </div>
-      <div className="cat-pill">{cat.icon} {cat.label}</div>
+      <div className="cat-pill">{neg ? '⚔️' : cat.icon} {cat.label}{neg ? ' · dishonor' : ''}</div>
       {tx.message ? <p className="quote">“{tx.message}”</p> : null}
       <div className="feed-foot">
         <span>{timeAgo(tx.ts)}</span>

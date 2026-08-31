@@ -27,10 +27,10 @@ AURA is a social reputation app. Give Honor (+) or Dishonor (−) Aura points fo
 Aura has no cash value and cannot be bought.
 
 ## 4. Required Play assets
-- App icon 512×512 PNG
+- App icon 512×512 PNG — `/icon-512.png` on the live site
 - Feature graphic 1024×500
 - At least 2 phone screenshots
-- Privacy policy URL (host a simple page on Vercel)
+- Privacy policy URL: https://aura-farming-yasar9.vercel.app/privacy.html
 - Content rating questionnaire
 - Target API level required by Play (PWABuilder handles this)
 

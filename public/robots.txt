@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://aura-farming-yasar9.vercel.app/privacy.html
